@@ -90,14 +90,32 @@ It appears that the largest delay is in opening the connection. Once that's over
 
 You can call the functions from a Python script and process the results yourself if you want. You just need to tell `kraken_cli.py` not to print the response by setting the `KRAKENCLI_RAW_RESULT` env var to true-evaluating string.
 
+To place a limit sell just below the lowest ask:
+
 ```
 import kraken_cli as kx
 import os
 
 os.environ['KRAKENCLI_RAW_RESULT'] = "yeah"
+
+# if you have otp enabled you must set this env var
 os.environ['KRAKENAPI_USE_OTP'] = "yeah"
 
-b1 = kx.Balance()
+# also, if you use OTP, you don't want to be asked between the Depth and
+# AddOrder calls, so do a dummy query for balance to put fresh OTP to cache
+kx.Balance()
+
+pair = "XXBTZEUR"
+
+order_book = kx.Depth(pair)
+
+asks = order_book[pair]['asks']
+bids = order_book[pair]['bids']
+
+res = kx.AddOrder(pair, 'sell', 'limit', 0.001, price=float(asks[0][0]) - .01)
+
+print(res)
+
 ```
 
 ## TODO
