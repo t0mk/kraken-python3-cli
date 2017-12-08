@@ -10,7 +10,7 @@ I wrote this because the other CLIs to Kraken seemed too complicated. This CLI i
 
 ## Dependencies
 
-`pip3 install requests tabulate argh`
+`pip3 install requests tabulate argh python-dateutil`
 
 If you want autocomplete in bash, you must install argcomplete:
 
