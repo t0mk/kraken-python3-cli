@@ -20,10 +20,12 @@ import dateutil.parser
 import hashlib
 import hmac
 import base64
+import collections
 
 import argh
 import requests
 import tabulate
+
 
 KRAKEN_API_URL = "https://api.kraken.com"
 
@@ -34,37 +36,111 @@ OTP_CACHE_FILE = os.path.expanduser("~/.kraken_otp")
 KRAKENKEY_FILE_ENV_VAR = "KRAKENKEY_FILE"
 
 
-ASSETS = ['KFEE', 'USDT', 'XDAO', 'XETC', 'XETH', 'XICN', 'XLTC', 'XMLN',
-          'XNMC', 'XREP', 'XXBT', 'XXDG', 'XXLM', 'XXMR', 'XXRP', 'XXVN',
-          'XZEC', 'ZCAD', 'ZEUR', 'ZGBP', 'ZJPY', 'ZKRW', 'ZUSD', 'EUR',
-          'FEE', 'USDT', 'DAO', 'ETC', 'ETH', 'ICN', 'LTC', 'MLN', 'NMC',
-          'REP', 'XBT', 'XDG', 'XLM', 'XMR', 'XRP', 'XVN', 'ZEC', 'CAD',
-          'GBP', 'JPY', 'KRW', 'USD']
+#ASSETS = ['KFEE', 'USDT', 'XDAO', 'XETC', 'XETH', 'XICN', 'XLTC', 'XMLN',
+#          'XNMC', 'XREP', 'XXBT', 'XXDG', 'XXLM', 'XXMR', 'XXRP', 'XXVN',
+#          'XZEC', 'ZCAD', 'ZEUR', 'ZGBP', 'ZJPY', 'ZKRW', 'ZUSD', 'EUR',
+#          'FEE', 'USDT', 'DAO', 'ETC', 'ETH', 'ICN', 'LTC', 'MLN', 'NMC',
+#          'REP', 'XBT', 'XDG', 'XLM', 'XMR', 'XRP', 'XVN', 'ZEC', 'CAD',
+#          'GBP', 'JPY', 'KRW', 'USD']
 
+ASSETS = [
+        "XXLM",
+        "XXBT",
+        "XNMC",
+        "DASH",
+        "XREP",
+        "XICN",
+        "XXRP",
+        "XZEC",
+        "XETH",
+        "ZKRW",
+        "KFEE",
+        "USDT",
+        "XXDG",
+        "ZJPY",
+        "XLTC",
+        "ZGBP",
+        "EOS",
+        "ZUSD",
+        "XETC",
+        "XDAO",
+        "BCH",
+        "ZCAD",
+        "ZEUR",
+        "GNO",
+        "XXMR",
+        "XMLN",
+        "XXVN"]
 
-PAIRS = ['USDTZUSD', 'XETCXETH', 'XETCXXBT', 'XETCZEUR', 'XETCZUSD',
-         'XETHXXBT', 'XETHXXBT.d', 'XETHZCAD', 'XETHZCAD.d', 'XETHZEUR',
-         'XETHZEUR.d',
-         'XETHZGBP', 'XETHZGBP.d', 'XETHZJPY', 'XETHZJPY.d', 'XETHZUSD',
-         'XETHZUSD.d', 'XICNXETH', 'XICNXXBT', 'XLTCXXBT', 'XLTCZEUR',
-         'XLTCZUSD', 'XMLNXETH', 'XMLNXXBT', 'XREPXETH', 'XREPXXBT',
-         'XREPZEUR',
-         'XREPZUSD', 'XXBTZCAD', 'XXBTZCAD.d', 'XXBTZEUR', 'XXBTZEUR.d',
-         'XXBTZGBP', 'XXBTZGBP.d', 'XXBTZJPY', 'XXBTZJPY.d', 'XXBTZUSD',
-         'XXBTZUSD.d', 'XXDGXXBT', 'XXLMXXBT', 'XXLMZEUR', 'XXLMZUSD',
-         'XXMRXXBT', 'XXMRZEUR', 'XXMRZUSD', 'XXRPXXBT', 'XZECXXBT',
-         'XZECZEUR',
-         'XZECZUSD', 'USDTUSD', 'ETCETH', 'ETCXBT', 'ETCEUR', 'ETCUSD',
-         'ETHXBT', 'ETHXBT.d', 'ETHCAD', 'ETHCAD.d', 'ETHEUR', 'ETHEUR.d',
-         'ETHGBP', 'ETHGBP.d', 'ETHJPY', 'ETHJPY.d', 'ETHUSD', 'ETHUSD.d',
-         'ICNETH', 'ICNXBT', 'LTCXBT', 'LTCEUR', 'LTCUSD', 'MLNETH', 'MLNXBT',
-         'REPETH', 'REPXBT', 'REPEUR', 'REPUSD', 'XBTCAD', 'XBTCAD.d',
-         'XBTEUR',
-         'XBTEUR.d', 'XBTGBP', 'XBTGBP.d', 'XBTJPY', 'XBTJPY.d', 'XBTUSD',
-         'XBTUSD.d', 'XDGXBT', 'XLMXBT', 'XLMEUR', 'XLMUSD', 'XMRXBT',
-         'XMREUR',
-         'XMRUSD', 'XRPXBT', 'ZECXBT', 'ZECEUR', 'ZECUSD']
-
+PAIRS = [
+        "XXBTZCAD",
+        "USDTZUSD",
+        "XMLNXXBT",
+        "XETHZUSD.d",
+        "XXBTZJPY",
+        "GNOXBT",
+        "BCHXBT",
+        "XETHZUSD",
+        "XZECZJPY",
+        "XETCZEUR",
+        "XXBTZGBP",
+        "XXLMZEUR",
+        "DASHUSD",
+        "XETHZGBP.d",
+        "XETHZCAD.d",
+        "XETHXXBT.d",
+        "XXBTZJPY.d",
+        "XXRPZEUR",
+        "XREPZEUR",
+        "XXRPZCAD",
+        "XXLMXXBT",
+        "DASHEUR",
+        "XMLNXETH",
+        "XICNXXBT",
+        "XLTCZUSD",
+        "GNOUSD",
+        "XETCZUSD",
+        "XXBTZGBP.d",
+        "XETHZGBP",
+        "XXRPZJPY",
+        "EOSETH",
+        "XICNXETH",
+        "XREPXETH",
+        "BCHUSD",
+        "DASHXBT",
+        "XXLMZUSD",
+        "XETHZCAD",
+        "XXBTZEUR",
+        "GNOETH",
+        "XXBTZCAD.d",
+        "XREPXXBT",
+        "XZECXXBT",
+        "XETHZEUR.d",
+        "XXBTZUSD",
+        "XXRPXXBT",
+        "XETHZJPY",
+        "EOSXBT",
+        "XXRPZUSD",
+        "XXBTZUSD.d",
+        "GNOEUR",
+        "BCHEUR",
+        "EOSUSD",
+        "XXDGXXBT",
+        "XETCXXBT",
+        "XLTCZEUR",
+        "XZECZUSD",
+        "XETHZJPY.d",
+        "EOSEUR",
+        "XXBTZEUR.d",
+        "XETHXXBT",
+        "XREPZUSD",
+        "XETHZEUR",
+        "XZECZEUR",
+        "XETCXETH",
+        "XXMRZEUR",
+        "XXMRXXBT",
+        "XLTCXXBT",
+        "XXMRZUSD"]
 
 CLOSETIMES = ['open', 'close', 'both']
 
@@ -98,6 +174,11 @@ def prettify_time_in_list_of_dicts(l):
                 i[k] = prettytime(i[k])
     return _l
 
+def to_ordered(list_of_dicts):
+    _l = []
+    for d in list_of_dicts:
+        _l.append(collections.OrderedDict(sorted(d.items())))
+    return _l
 
 def tabprint(l, sortkey='time'):
     _l = list(l)
@@ -107,6 +188,7 @@ def tabprint(l, sortkey='time'):
     if sortkey in _l[0]:
         _l = sorted(_l, key=lambda i: i[sortkey])
     tab = prettify_time_in_list_of_dicts(_l)
+    tab = to_ordered(tab)
     print(tabulate.tabulate(tab, headers='keys'))
 
 
